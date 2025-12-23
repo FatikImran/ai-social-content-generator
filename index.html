@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Content Generator - Social Media Captions</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 900px;
+            width: 100%;
+            padding: 40px;
+            animation: fadeIn 0.5s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 2.2em;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1rem;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+            font-size: 0.95em;
+        }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: border-color 0.3s;
+            font-family: inherit;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 25px;
+        }
+
+        button {
+            flex: 1;
+            padding: 15px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .generate-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .generate-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .generate-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .clear-btn {
+            background: #f0f0f0;
+            color: #666;
+        }
+
+        .clear-btn:hover {
+            background: #e0e0e0;
+        }
+
+        .results {
+            margin-top: 30px;
+            display: none;
+        }
+
+        .results.show {
+            display: block;
+        }
+
+        .results h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 1.8em;
+        }
+
+        .result-card {
+            background: #f8f9ff;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-radius: 8px;
+            position: relative;
+            animation: slideIn 0.3s;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        .result-card:nth-child(2) { animation-delay: 0.1s; }
+        .result-card:nth-child(3) { animation-delay: 0.2s; }
+        .result-card:nth-child(4) { animation-delay: 0.3s; }
+        .result-card:nth-child(5) { animation-delay: 0.4s; }
+        .result-card:nth-child(6) { animation-delay: 0.5s; }
+
+        .result-number {
+            color: #667eea;
+            font-weight: 700;
+            margin-bottom: 10px;
+            font-size: 0.9em;
+        }
+
+        .result-text {
+            color: #333;
+            line-height: 1.6;
+            margin-bottom: 10px;
+            white-space: pre-wrap;
+        }
+
+        .copy-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.85em;
+            transition: all 0.3s;
+        }
+
+        .copy-btn:hover {
+            background: #5568d3;
+        }
+
+        .copy-btn.copied {
+            background: #10b981;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            display: none;
+        }
+
+        .loading.show {
+            display: block;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error {
+            background: #fee;
+            border-left: 4px solid #f44;
+            padding: 15px;
+            border-radius: 8px;
+            color: #c33;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .error.show {
+            display: block;
+        }
+
+        .info-box {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            font-size: 0.9em;
+            color: #1565c0;
+        }
+
+        .success-notice {
+            background: #d4edda;
+            border-left: 4px solid #28a745;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            color: #155724;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 25px;
+            }
+
+            h1 {
+                font-size: 1.8em;
+            }
+
+            .button-group {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>✨ AI Content Generator</h1>
+        <p class="subtitle">Generate engaging social media captions instantly using AI</p>
+
+        <div class="success-notice">
+            <strong>✅ Ready to Use!</strong> No API token needed - just fill in the form and generate content.
+        </div>
+
+        <div class="input-group">
+            <label for="topic">Topic or Niche *</label>
+            <input type="text" id="topic" placeholder="e.g., Fitness motivation, Tech startups, Healthy recipes" required>
+        </div>
+
+        <div class="input-group">
+            <label for="platform">Platform *</label>
+            <select id="platform" required>
+                <option value="">Select Platform</option>
+                <option value="Instagram">Instagram</option>
+                <option value="LinkedIn">LinkedIn</option>
+                <option value="Twitter/X">Twitter/X</option>
+                <option value="Facebook">Facebook</option>
+                <option value="TikTok">TikTok</option>
+            </select>
+        </div>
+
+        <div class="input-group">
+            <label for="tone">Tone/Style *</label>
+            <select id="tone" required>
+                <option value="">Select Tone</option>
+                <option value="professional">Professional</option>
+                <option value="casual and friendly">Casual & Friendly</option>
+                <option value="inspirational">Inspirational</option>
+                <option value="humorous">Humorous</option>
+                <option value="educational">Educational</option>
+                <option value="promotional">Promotional</option>
+            </select>
+        </div>
+
+        <div class="input-group">
+            <label for="additional">Additional Details (Optional)</label>
+            <textarea id="additional" placeholder="Any specific requirements, call-to-actions, target audience, or context..."></textarea>
+        </div>
+
+        <div class="button-group">
+            <button class="generate-btn" onclick="generateContent()">Generate Content 🚀</button>
+            <button class="clear-btn" onclick="clearForm()">Clear</button>
+        </div>
+
+        <div class="error" id="error"></div>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Generating creative captions with AI...</p>
+            <p style="font-size: 0.9em; color: #666; margin-top: 10px;">This may take 10-30 seconds</p>
+        </div>
+
+        <div class="results" id="results"></div>
+
+        <div class="info-box">
+            <strong>💡 Tips for Best Results:</strong>
+            <ul style="margin-left: 20px; margin-top: 8px;">
+                <li>Be specific with your topic (e.g., "morning workout motivation" vs just "fitness")</li>
+                <li>Match tone to your brand voice</li>
+                <li>Add context about your audience for more targeted captions</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        async function generateContent() {
+            const topic = document.getElementById('topic').value.trim();
+            const platform = document.getElementById('platform').value;
+            const tone = document.getElementById('tone').value;
+            const additional = document.getElementById('additional').value.trim();
+
+            // Validation
+            if (!topic || !platform || !tone) {
+                showError('Please fill in all required fields (Topic, Platform, Tone)');
+                return;
+            }
+
+            // Show loading
+            document.getElementById('loading').classList.add('show');
+            document.getElementById('results').classList.remove('show');
+            document.getElementById('error').classList.remove('show');
+            document.querySelector('.generate-btn').disabled = true;
+
+            try {
+                // Call our Vercel serverless function
+                const response = await fetch('/api/generate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        topic,
+                        platform,
+                        tone,
+                        additional
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to generate content');
+                }
+
+                if (data.captions && data.captions.length > 0) {
+                    displayResults(data.captions, platform);
+                } else {
+                    throw new Error('No captions generated');
+                }
+
+            } catch (error) {
+                console.error('Error:', error);
+                showError(error.message || 'Failed to generate content. Please try again.');
+            } finally {
+                document.getElementById('loading').classList.remove('show');
+                document.querySelector('.generate-btn').disabled = false;
+            }
+        }
+
+        function displayResults(captions, platform) {
+            const resultsDiv = document.getElementById('results');
+            
+            let html = '<h2>Generated Captions 🎉</h2>';
+            
+            captions.forEach((caption, index) => {
+                html += `
+                    <div class="result-card">
+                        <div class="result-number">CAPTION ${index + 1} - ${platform}</div>
+                        <div class="result-text">${escapeHtml(caption)}</div>
+                        <button class="copy-btn" onclick="copyToClipboard(this, ${index})">
+                            Copy
+                        </button>
+                    </div>
+                `;
+            });
+
+            resultsDiv.innerHTML = html;
+            resultsDiv.classList.add('show');
+            
+            // Store captions for copying
+            window.currentCaptions = captions;
+        }
+
+        function copyToClipboard(button, index) {
+            const caption = window.currentCaptions[index];
+            
+            navigator.clipboard.writeText(caption).then(() => {
+                button.textContent = '✓ Copied!';
+                button.classList.add('copied');
+                
+                setTimeout(() => {
+                    button.textContent = 'Copy';
+                    button.classList.remove('copied');
+                }, 2000);
+            }).catch(err => {
+                showError('Failed to copy to clipboard');
+            });
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('error');
+            errorDiv.textContent = message;
+            errorDiv.classList.add('show');
+            
+            setTimeout(() => {
+                errorDiv.classList.remove('show');
+            }, 8000);
+        }
+
+        function clearForm() {
+            document.getElementById('topic').value = '';
+            document.getElementById('platform').value = '';
+            document.getElementById('tone').value = '';
+            document.getElementById('additional').value = '';
+            document.getElementById('results').classList.remove('show');
+            document.getElementById('error').classList.remove('show');
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Allow Enter key in inputs (not textarea)
+        document.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') {
+                e.preventDefault();
+                generateContent();
+            }
+        });
+    </script>
+</body>
+</html>
