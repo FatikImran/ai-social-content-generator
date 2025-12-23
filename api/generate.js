@@ -14,13 +14,15 @@ export default async function handler(req, res) {
 
     // Get HuggingFace token from environment variable
     const HF_TOKEN = process.env.HUGGINGFACE_API_TOKEN;
-    
+
     if (!HF_TOKEN) {
         return res.status(500).json({ error: 'Server configuration error' });
     }
 
     // Build the prompt
-    const prompt = `Generate 5 unique and engaging ${platform} captions about "${topic}" in a ${tone} tone.
+    const systemPrompt = `You are a creative social media content generator. Generate exactly 5 unique, engaging captions for ${platform} posts.`;
+
+    const userPrompt = `Generate 5 unique and engaging ${platform} captions about "${topic}" in a ${tone} tone.
 
 ${additional ? `Additional context: ${additional}` : ''}
 
@@ -31,23 +33,12 @@ Requirements:
 - Match the ${tone} tone consistently
 - Number each caption (1-5)
 
-Format:
-1. [First caption with hashtags]
-
-2. [Second caption with hashtags]
-
-3. [Third caption with hashtags]
-
-4. [Fourth caption with hashtags]
-
-5. [Fifth caption with hashtags]
-
-Generate the captions now:`;
+Format each caption clearly with numbers 1-5.`;
 
     try {
-        // Call HuggingFace API
+        // Call NEW HuggingFace Router API (OpenAI-compatible)
         const response = await fetch(
-            'https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2',
+            'https://router.huggingface.co/v1/chat/completions',
             {
                 method: 'POST',
                 headers: {
@@ -55,73 +46,91 @@ Generate the captions now:`;
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    inputs: prompt,
-                    parameters: {
-                        max_new_tokens: 800,
-                        temperature: 0.8,
-                        top_p: 0.9,
-                        return_full_text: false
-                    }
+                    model: 'meta-llama/Llama-3.2-3B-Instruct',
+                    messages: [
+                        {
+                            role: 'system',
+                            content: systemPrompt
+                        },
+                        {
+                            role: 'user',
+                            content: userPrompt
+                        }
+                    ],
+                    max_tokens: 800,
+                    temperature: 0.8,
+                    top_p: 0.9
                 })
             }
         );
 
         if (!response.ok) {
             const errorData = await response.json();
-            throw new Error(errorData.error || 'HuggingFace API error');
+            throw new Error(errorData.error?.message || errorData.error || 'HuggingFace API error');
         }
 
         const data = await response.json();
-        
-        // Extract generated text
+
+        // Extract generated text from OpenAI-compatible response
         let generatedText = '';
-        if (Array.isArray(data) && data[0]?.generated_text) {
-            generatedText = data[0].generated_text;
-        } else if (data.generated_text) {
-            generatedText = data.generated_text;
+        if (data.choices && data.choices[0]?.message?.content) {
+            generatedText = data.choices[0].message.content;
         } else {
             throw new Error('Unexpected API response format');
         }
 
         // Parse captions
         const captions = parseCaptions(generatedText);
-        
+
         if (captions.length === 0) {
             throw new Error('Failed to parse captions from AI response');
         }
 
         // Return captions
-        return res.status(200).json({ 
+        return res.status(200).json({
             captions: captions.slice(0, 5),
-            success: true 
+            success: true
         });
 
     } catch (error) {
         console.error('Error:', error);
-        return res.status(500).json({ 
+        return res.status(500).json({
             error: error.message || 'Failed to generate content',
-            success: false 
+            success: false
         });
     }
 }
 
 function parseCaptions(text) {
     const captions = [];
-    
-    // Method 1: Split by numbered lines
-    const numberedSplit = text.split(/\n\d+\.\s+/);
+
+    // Method 1: Split by numbered lines (1., 2., 3., etc.)
+    const numberedSplit = text.split(/\n\s*\d+\.\s+/);
     if (numberedSplit.length > 1) {
         numberedSplit.slice(1).forEach(caption => {
             const cleaned = caption.split(/\n\n+/)[0].trim();
-            if (cleaned) captions.push(cleaned);
+            if (cleaned && cleaned.length > 10) {
+                captions.push(cleaned);
+            }
         });
     }
-    
-    // Method 2: If method 1 didn't work, try splitting by double newlines
+
+    // Method 2: Try splitting by double newlines
     if (captions.length === 0) {
         const paragraphs = text.split(/\n\n+/);
         paragraphs.forEach(para => {
             const cleaned = para.replace(/^\d+\.\s*/, '').trim();
+            if (cleaned && cleaned.length > 20) {
+                captions.push(cleaned);
+            }
+        });
+    }
+
+    // Method 3: Try splitting by single newlines if we still have nothing
+    if (captions.length === 0) {
+        const lines = text.split(/\n/);
+        lines.forEach(line => {
+            const cleaned = line.replace(/^\d+[\.\)]\s*/, '').trim();
             if (cleaned && cleaned.length > 20) {
                 captions.push(cleaned);
             }
