@@ -47,7 +47,7 @@ Generate the captions now:`;
     try {
         // Call HuggingFace API
         const response = await fetch(
-            'https://api-inference.huggingface.co/models/meta-llama/Llama-3.2-3B-Instruct',
+            'https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2',
             {
                 method: 'POST',
                 headers: {
